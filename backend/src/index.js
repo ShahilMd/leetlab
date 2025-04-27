@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import authRoutes from "./routers/auth.routes.js";
 
 
 
@@ -20,9 +21,7 @@ app.use(cors({
 
 const port = process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+app.use("/api/v1/auth",authRoutes)
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
