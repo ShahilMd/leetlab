@@ -3,7 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import authRoutes from "./routers/auth.routes.js";
-
+import "./utils/deleteUnverifiedUsers.js";
 
 
 

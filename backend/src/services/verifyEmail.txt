@@ -1,0 +1,9 @@
+Welcome, {{name}}!
+
+Verify your account by clicking this link:
+{{verificationLink}}
+
+(Link expires on: {{validity}})
+
+---
+© {{year}} Your Company.

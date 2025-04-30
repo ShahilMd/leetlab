@@ -25,6 +25,12 @@ model User{
   password String
   image String?
   role UserRole @default(USER)
+  isVerified Boolean @default(false)
+  verificationToken String?
+  verificationTokenExpiry DateTime?
+  resetPasswordToken String?
+  resetPasswordTokenExpiry DateTime?
+  refreshToken String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

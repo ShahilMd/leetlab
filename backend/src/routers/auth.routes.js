@@ -1,11 +1,13 @@
 import express from "express";
-import { registerUser } from "../controllers/auth.controllers.js";
+import { registerUser, verifyEmail } from "../controllers/auth.controllers.js";
 
 
 const authRoutes = express.Router();
 
-authRoutes.post("/register",registerUser);
+// Email verification should come before other routes
+authRoutes.get("/verify-email/:token", verifyEmail);
 
+authRoutes.post("/register",registerUser);
 authRoutes.post("/login",registerUser);
 authRoutes.post("/logout",registerUser);
 authRoutes.get("/profile",registerUser);
