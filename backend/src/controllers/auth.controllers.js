@@ -1,42 +1,21 @@
 import bcrypt from "bcryptjs";
 import { db } from "../libs/db.js";
-import validator from "validator";
+import { validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
 import crypto, { verify } from "crypto";
 import { UserRole } from "../generated/prisma/index.js";
 import sendVerificationemail from "../services/email.service.js";
+import generateTokens from "../utils/TokenGenerator.js";
 
 
-
-export const registerUser =async(req,res)=>{
+export const registerUser = async(req,res)=>{
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
   const {name,email,password} = req.body
 
-  const isEmail = validator.isEmail(email);
-  const isPassword = validator.isLength(password, { min: 6 }) &&
-    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/.test(password);
-  const isName = validator.isAlphanumeric(name) && name.trim().length > 0;
-
-  if (!isEmail || !isName) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: "INVALID_INPUT",
-        message: "Invalid input",
-        details: "Please provide a valid email address and name",
-      },
-    });
-  }
-
-  if (!isPassword) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: "INVALID_PASSWORD",
-        message: "Invalid password",
-        details: "Please provide a strong password",
-      },
-    });
-  }
   try {
     const isExist = await db.user.findUnique({
       where:{email}
@@ -64,7 +43,7 @@ export const registerUser =async(req,res)=>{
         password:hasedPassword,
         role:UserRole.USER,
         verificationToken:token,
-        verificationTokenExpiry
+        verificationTokenExpiry,
       }
     })
     if (!newUser) {
@@ -100,19 +79,179 @@ export const registerUser =async(req,res)=>{
 }
 
 export const  verifyEmail = async(req,res)=>{
-
-  try {
-    
   
   const {token} = req.params
-  console.log(token)
-  return res.status(200).json({
-    sucesses:true
+  try {
+    console.log(token)
+    if(!token){
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_TOKEN",
+          message: "Invalid Token",
+          details: "No Token Found Please Register First",
+        },
+      });
+
+    }
+ 
+    const user = await await db.user.findFirst({
+      where:{
+        verificationToken:token,
+        verificationTokenExpiry: {
+          gt: new Date()
+        }
+      },
+    })
+    if(!user){
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_TOKEN",
+          message: "Invalid Verification Token",
+          details: "Please request a new verification email",
+        },
+      });
+
+    }
+
+   await db.user.update({
+    where: { id: user.id },
+    data:{
+      isVerified:true,
+      verificationToken:null,
+      verificationTokenExpiry:null
+    }
+   })
+   return res.status(201).json({
+    status: true,
+    message: "Email verified successfully",
   })
-} catch (error) {
+
+  } catch (error) {
   return res.status(500).json({
     sucesses:false,
     error:error.message
   })
 }
+}
+
+export const loginUser = async(req,res)=>{
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  const {email,password} = req.body;
+
+  try {
+    const user = await db.user.findUnique({
+      where:{email}
+    });
+
+    if(!user){
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Invalid Email or Password",
+          details: "Please use a different email or password and try again"
+        }
+      });
+    }
+
+    const matchPassword = await bcrypt.compare(password,user.password);
+
+    if(!matchPassword){
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Invalid Email or Password",
+          details: "Please use a different email or password and try again"
+        }
+      });
+    }
+
+    const {accessToken,refreshToken} = generateTokens(user.id)
+
+    await db.user.update({
+      where:{email},
+      data:{
+        refreshToken
+      }
+    })
+
+    const cookieOptions = {
+      httpOnly:true,
+      secure:process.env.NODE_ENV === 'production',
+      sameSite:process.env.NODE_ENV === 'production' ? 'none':'strict',
+    }
+  
+    res.cookie('accessToken',accessToken,cookieOptions)
+    res.cookie('refreshToken',refreshToken,cookieOptions)
+
+
+   
+    return res.status(200).json({
+      status: true,
+      message: "User logged in successfully",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role:user.role
+      },
+    })
+  } catch (error) {
+    return res.status(500).json({
+      sucesses:false,
+      message:"something went wrong",
+      error:error.message
+    })
+  }
+  
+}
+
+export const userProfile = async(req,res)=>{
+  try {
+   
+
+    // if(!refreshToken){
+    //   return res.status(401).json({
+    //     success:false,
+    //     message:"Unauthorized Access Does not have refresh token"
+    //   })
+    // }
+
+    // const user =await db.user.findFirst({
+    //   where:{refreshToken},
+    //   select: {
+    //     id: true,
+    //     email: true,
+    //     name: true,
+    //     isVerified: true,
+    //     createdAt: true,
+    //     updatedAt: true
+    //   }
+    // })
+  
+    // if(!user){
+    //   return res.status(401).json({
+    //     success:false,
+    //     message:"Unauthorized Access"
+    //   })
+    // }
+    return res.status(200).json({
+      status: true,
+      message: "User Profile",
+      user:req.user
+    })
+  } catch (error) {
+    return res.status(500).json({
+      sucesses:false,
+      message:"something went wrong",
+      error:error.message
+    })
+  }
 }

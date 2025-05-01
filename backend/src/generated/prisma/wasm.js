@@ -134,7 +134,8 @@ exports.Prisma.UserScalarFieldEnum = {
   resetPasswordTokenExpiry: 'resetPasswordTokenExpiry',
   refreshToken: 'refreshToken',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  timeZone: 'timeZone'
 };
 
 exports.Prisma.SortOrder = {
