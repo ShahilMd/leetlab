@@ -6,6 +6,7 @@ import crypto, { verify } from "crypto";
 import { UserRole } from "../generated/prisma/index.js";
 import sendVerificationemail from "../services/email.service.js";
 import generateTokens from "../utils/TokenGenerator.js";
+import { clear } from "console";
 
 
 export const registerUser = async(req,res)=>{
@@ -188,8 +189,8 @@ export const loginUser = async(req,res)=>{
       sameSite:process.env.NODE_ENV === 'production' ? 'none':'strict',
     }
   
-    res.cookie('accessToken',accessToken,cookieOptions)
-    res.cookie('refreshToken',refreshToken,cookieOptions)
+    res.cookie('accToken',accessToken,cookieOptions)
+    res.cookie('refToken',refreshToken,cookieOptions)
 
 
    
@@ -215,37 +216,31 @@ export const loginUser = async(req,res)=>{
 
 export const userProfile = async(req,res)=>{
   try {
-   
+    // this decoded token come from isLoggedin middleware 
+    const decodedToken = req.user
 
-    // if(!refreshToken){
-    //   return res.status(401).json({
-    //     success:false,
-    //     message:"Unauthorized Access Does not have refresh token"
-    //   })
-    // }
-
-    // const user =await db.user.findFirst({
-    //   where:{refreshToken},
-    //   select: {
-    //     id: true,
-    //     email: true,
-    //     name: true,
-    //     isVerified: true,
-    //     createdAt: true,
-    //     updatedAt: true
-    //   }
-    // })
-  
-    // if(!user){
-    //   return res.status(401).json({
-    //     success:false,
-    //     message:"Unauthorized Access"
-    //   })
-    // }
+    const user = await db.user.findUnique({
+      where:{id:decodedToken.id},
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    })
+    
+    if(!user){
+      return res.status(401).json({
+        success:false,
+        message:"Unauthorized Access"
+      })
+    }
     return res.status(200).json({
       status: true,
       message: "User Profile",
-      user:req.user
+      user:user
     })
   } catch (error) {
     return res.status(500).json({
@@ -254,4 +249,39 @@ export const userProfile = async(req,res)=>{
       error:error.message
     })
   }
+}
+
+export const logout = async (req,res)=>{
+  const decodedToken = req.user;
+  if(!decodedToken){
+    return res.status(401).json({
+      success:false,
+      message:"Unauthorized Access"
+    })
+  }
+
+  const user = await db.user.findUnique({
+    where:{
+      id:decodedToken.id
+    }
+  })
+
+  if(!user){
+    return res.status(401).json({
+      success:false,
+      message:"Unauthorized Access"
+    })
+  }
+
+  await db.user.update({
+    where:{id:user.id},
+    data:{refreshToken:null}
+  })
+  res.clearCookie('accToken')
+  res.clearCookie('refToken')
+  return res.status(200).json({
+    status: true,
+    message: "User logged out successfully",
+  })
+
 }

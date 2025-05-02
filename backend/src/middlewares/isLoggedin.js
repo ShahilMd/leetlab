@@ -3,13 +3,12 @@ import jwt from "jsonwebtoken";
 import generateTokens from "../utils/TokenGenerator.js";
 
 const isLoggedin = async (req, res, next) => {
+  const {refToken,accToken} = req.cookies
   try {
-  const {refreshToken,accessToken} = req.cookies
-  console.log(refreshToken,accessToken);
   
 
-  if(!accessToken){
-    if(!refreshToken){
+  if(!accToken){
+    if(!refToken){
       return res.status(401).json({
         status: false,
         message: "Unauthorized access",
@@ -17,7 +16,7 @@ const isLoggedin = async (req, res, next) => {
       });
     }
 
-    const decodedToken = jwt.verify(refreshToken,process.env.REFRESH_TOKEN_SECRET)
+    const decodedToken = jwt.verify(refToken,process.env.REFRESH_TOKEN_SECRET)
 
     const user =await db.user.findUnique({where:{id:decodedToken.id}})
     console.log(user.email)
@@ -42,12 +41,12 @@ const isLoggedin = async (req, res, next) => {
         sameSite:process.env.NODE_ENV === 'production' ? 'none':'strict',
       }
     
-      res.cookie('accessToken',accessToken,cookieOptions)
-      res.cookie('refreshToken',refreshToken,cookieOptions)
+      res.cookie('accToken',accessToken,cookieOptions)
+      res.cookie('refToken',refreshToken,cookieOptions)
       req.user = decodedToken;
       next();
   }else{
-    const decodedToken = jwt.verify(accessToken,process.env.ACCESS_TOKEN_SECRET)
+    const decodedToken = jwt.verify(accToken,process.env.ACCESS_TOKEN_SECRET)
 
     const user =await db.user.findUnique({where:{id:decodedToken.id}}) 
     if(!user){
@@ -59,7 +58,7 @@ const isLoggedin = async (req, res, next) => {
     }
     const {accessToken,refreshToken} = generateTokens(user.id)
 
-      awaitdb.user.update({
+      await db.user.update({
         where:{id:user.id},
         data:{refreshToken}
       })
@@ -70,8 +69,8 @@ const isLoggedin = async (req, res, next) => {
       sameSite:process.env.NODE_ENV === 'production' ? 'none':'strict',
     }
   
-    res.cookie('accessToken',accessToken,cookieOptions)
-    res.cookie('refreshToken',refreshToken,cookieOptions)
+    res.cookie('accToken',accessToken,cookieOptions)
+    res.cookie('refToken',refreshToken,cookieOptions)
     req.user = decodedToken;
     next();
   }
