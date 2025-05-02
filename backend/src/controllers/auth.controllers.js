@@ -183,14 +183,22 @@ export const loginUser = async(req,res)=>{
       }
     })
 
-    const cookieOptions = {
-      httpOnly:true,
-      secure:process.env.NODE_ENV === 'production',
-      sameSite:process.env.NODE_ENV === 'production' ? 'none':'strict',
-    }
+    const cookieOptionsAccessToken = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 5 * 60 * 1000, // 5 minutes for access token
+    };
+    
+    const cookieOptionsRefreshToken = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for refresh token
+    };
   
-    res.cookie('accToken',accessToken,cookieOptions)
-    res.cookie('refToken',refreshToken,cookieOptions)
+    res.cookie('accToken',accessToken,cookieOptionsAccessToken)
+    res.cookie('refToken',refreshToken,cookieOptionsRefreshToken)
 
 
    
@@ -217,20 +225,9 @@ export const loginUser = async(req,res)=>{
 export const userProfile = async(req,res)=>{
   try {
     // this decoded token come from isLoggedin middleware 
-    const decodedToken = req.user
+    const user = req.user
 
-    const user = await db.user.findUnique({
-      where:{id:decodedToken.id},
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        isVerified: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
-    
+
     if(!user){
       return res.status(401).json({
         success:false,
@@ -252,20 +249,7 @@ export const userProfile = async(req,res)=>{
 }
 
 export const logout = async (req,res)=>{
-  const decodedToken = req.user;
-  if(!decodedToken){
-    return res.status(401).json({
-      success:false,
-      message:"Unauthorized Access"
-    })
-  }
-
-  const user = await db.user.findUnique({
-    where:{
-      id:decodedToken.id
-    }
-  })
-
+  const user = req.user
   if(!user){
     return res.status(401).json({
       success:false,
