@@ -38,7 +38,7 @@ const isLoggedin = async (req, res, next) => {
     }
     const {accessToken,refreshToken} = generateTokens(user.id)
 
-      awaitdb.user.update({
+      await db.user.update({
         where:{id:user.id},
         data:{refreshToken}
       })
