@@ -99,7 +99,28 @@ export const createProblem = async (req, res) => {
   }
 };
 
-export const getAllProblems = async (req, res) => {};
+export const getAllProblems = async (req, res) => {
+  try {
+    const problems = await db.problem.findMany();
+    if(!problems){
+      return res.status(404).json({
+        status:false,
+        message:"No problems found"
+      })
+    }
+    return res.status(200).json({
+      status:true,
+      message:"All problems fetched Successfully",
+      problems
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success:false,
+      message:"something went wrong",
+      error:error.message
+    })
+  }
+};
 
 export const getProblemById = async (req, res) => {};
 

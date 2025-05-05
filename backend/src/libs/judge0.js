@@ -16,7 +16,6 @@ export const submitBatch =async (submissions)=>{
     submissions
   }
 );
-  console.log(`submission result ${data}`)
   return data // it will be array of multiple object token 
 }
 
