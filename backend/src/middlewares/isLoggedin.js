@@ -4,6 +4,7 @@ import generateTokens from "../utils/TokenGenerator.js";
 
 const isLoggedin = async (req, res, next) => {
   const {refToken,accToken} = req.cookies
+  
   try {
   
 
@@ -86,7 +87,9 @@ const isLoggedin = async (req, res, next) => {
 
       await db.user.update({
         where:{id:user.id},
-        data:{refreshToken}
+        data:{
+          refreshToken
+        }
       })
 
       const cookieOptionsAccessToken = {
