@@ -11,8 +11,6 @@ return languageMap[language];
 }
 
 export const submitBatch =async (submissions)=>{
-  console.log(`submission:${submissions}`)
-  console.log(process.env.JUDGE_URL)
   const {data} =await axios.post(`${process.env.JUDGE_URL}/submissions/batch?base64_encoded=false`,
   {
     submissions

@@ -28,7 +28,7 @@ const isLoggedin = async (req, res, next) => {
         role:true
       }
     });
-    console.log(user.email)
+
     if(!user){
       return res.status(401).json({
         status: false,

@@ -44,7 +44,7 @@ async function  sendVerificationemail(name,email,token,verificationTokenExpiry){
         'X-Mailer': 'YourCompanyMailer'
     }
   });
-  console.log(`Mail Send to successfully to ${email} Id is ${info.messageId}`);
+  
 }
 
 export default sendVerificationemail;

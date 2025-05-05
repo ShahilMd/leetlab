@@ -16,6 +16,26 @@ export const createProblem = async (req, res) => {
   } = req.body;
 
   try {
+
+    if(!title || !description || !difficulty || !tags || !examples || !constraints || !testcases || !codeSnippets || !referenceSolutions){
+      return res.status(400).json({
+        error:"All fields are required"
+      })
+    }
+  const newTitle = title.toLowerCase().replace(/\s/g, "-");
+
+  const problem = await db.problem.findFirst({
+    where: {
+      title: newTitle,
+    },
+  });
+console.log(problem);
+
+  if (problem) {
+    return res.status(400).json({
+      error: "Problem already exists",
+    });
+  }
     
     for(const[language,solutionCode] of Object.entries(referenceSolutions)){
 
