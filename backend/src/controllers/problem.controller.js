@@ -16,25 +16,21 @@ export const createProblem = async (req, res) => {
   } = req.body;
 
   try {
-
+ // here we check if all fields are present or not
     if(!title || !description || !difficulty || !tags || !examples || !constraints || !testcases || !codeSnippets || !referenceSolutions){
       return res.status(400).json({
         error:"All fields are required"
       })
     }
-  const newTitle = title.toLowerCase().replace(/\s/g, "-");
+    // we store title in a new veriable so that we can use it to check if problem already exists or not
+  const newTitle = title.toLowerCase().replace(/\s+/g, "");
 
-  const problem = await db.problem.findFirst({
-    where: {
-      title: newTitle,
-    },
-  });
-console.log(problem);
-
-  if (problem) {
+  const problem = await db.problem.findMany();
+  
+  if(problem.find((p)=>p.title.toLowerCase().replace(/\s+/g, "") === newTitle)){
     return res.status(400).json({
-      error: "Problem already exists",
-    });
+      error:"Problem already exists"
+    })
   }
     
     for(const[language,solutionCode] of Object.entries(referenceSolutions)){
