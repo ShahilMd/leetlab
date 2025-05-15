@@ -230,6 +230,10 @@ if(referenceSolutions){
       }
     }
   } 
+}else{
+  return res.status(400).json({
+    error:"Reference solutions are required"
+  })
 }
   const updatedProblem = await db.problem.update({
     where:{id},
