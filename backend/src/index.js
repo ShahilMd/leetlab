@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routers/auth.routes.js";
 import "./utils/deleteUnverifiedUsers.js";
 import problemRoutes from "./routers/problem.route.js";
+import executionRoutes from "./routers/execution.route.js";
 
 
 
@@ -24,6 +25,7 @@ const port = process.env.PORT || 3000;
 
 app.use("/api/v1/auth",authRoutes)
 app.use("/api/v1/problems" , problemRoutes)
+app.use("/api/v1/execute-code" ,executionRoutes)
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
