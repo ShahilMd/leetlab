@@ -10,6 +10,14 @@ return languageMap[language];
 
 }
 
+export const getLanguage = (language_id)=>{
+  const language = {
+      71:"PYTHON",
+      62:"JAVA",
+      63:"JAVASCRIPT",
+  }
+  return language[language_id] || "Unknown"
+}
 export const submitBatch =async (submissions)=>{
   const {data} =await axios.post(`${process.env.JUDGE_URL}/submissions/batch?base64_encoded=false`,
   {
