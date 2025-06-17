@@ -7,6 +7,6 @@ const executionRoutes = express.Router();
 
 executionRoutes.post("/run-code", isLoggedin, runCode);
 
-executionRoutes.post("/submit-code ", isLoggedin, submitCode);
+executionRoutes.post("/submit-code", isLoggedin, submitCode);
 
 export default executionRoutes;
