@@ -8,7 +8,7 @@ import  isLoggedin  from "../middlewares/isLoggedin.js";
 const authRoutes = express.Router();
 
 // Email verification should come before other routes
-authRoutes.get("/verify-email/:token", verifyEmail);
+authRoutes.get("/verify-email/:email/:token", verifyEmail);
 
 authRoutes.post("/register",registerValidator,registerUser);
 authRoutes.post("/login",isVerified,loginValidator,loginUser);

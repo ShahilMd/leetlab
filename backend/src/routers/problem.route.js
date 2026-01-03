@@ -1,5 +1,5 @@
 import express from "express";
-import { createProblem, deleteProblem, getAllProblems, getAllProblemsSolvedByUser, getProblemById, updateProblem } from "../controllers/problem.controller.js";
+import { createProblem, deleteProblem, getAllProblems, getAllProblemsSolvedByUser, getProblemById, updateProblem } from "../controllers/problem.controllers.js";
 import isLoggedin from "../middlewares/isLoggedin.js";
 import checkAdmin from "../middlewares/checkAdmin.js";
 

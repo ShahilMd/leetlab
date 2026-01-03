@@ -2,11 +2,12 @@ import bcrypt from "bcryptjs";
 import { db } from "../libs/db.js";
 import { validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
-import crypto, { verify } from "crypto";
+import crypto, { randomBytes, verify } from "crypto";
 import { UserRole } from "../generated/prisma/index.js";
 import sendVerificationemail from "../services/email.service.js";
 import generateTokens from "../utils/TokenGenerator.js";
 import { clear } from "console";
+import { redis } from "../index.js";
 
 
 export const registerUser = async(req,res)=>{
@@ -21,6 +22,7 @@ export const registerUser = async(req,res)=>{
     const isExist = await db.user.findUnique({
       where:{email}
     })
+    console.log(isExist)
     if(isExist){
       return res.status(400).json({
         success: false,
@@ -34,19 +36,20 @@ export const registerUser = async(req,res)=>{
 
     const hasedPassword = await bcrypt.hash(password,12)
     const token = crypto.randomBytes(64).toString("hex")
-    const verificationTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes-
+    const verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes-
     await sendVerificationemail(name,email,token,verificationTokenExpiry) // verification link send to user email
 
-    const newUser = await db.user.create({
+    const newUser = await redis.set(email,{ 
       data:{
-        name,
-        email,
-        password:hasedPassword,
-        role:UserRole.USER,
-        verificationToken:token,
-        verificationTokenExpiry,
-      }
-    })
+         name,
+         email,
+         password:hasedPassword,
+         role:UserRole.USER,
+         verificationToken:token,
+         verificationTokenExpiry,
+       }
+      },{ ex: 600 })
+
     if (!newUser) {
       return res.status(402).json({
         status: false,
@@ -57,18 +60,8 @@ export const registerUser = async(req,res)=>{
     return res.status(201).json({
       status: true,
       message: "User registered successfully, please verify your email address",
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role:newUser.role
-      },
     });
-
-
-
-  
-    
+      
   } catch (error) {
     return res.status(500).json({
       sucesses:false,
@@ -81,9 +74,10 @@ export const registerUser = async(req,res)=>{
 
 export const  verifyEmail = async(req,res)=>{
   
-  const {token} = req.params
+  const {email,token} = req.params
+  console.log(email,token)
+
   try {
-    console.log(token)
     if(!token){
       return res.status(400).json({
         success: false,
@@ -96,15 +90,21 @@ export const  verifyEmail = async(req,res)=>{
 
     }
  
-    const user = await await db.user.findFirst({
-      where:{
-        verificationToken:token,
-        verificationTokenExpiry: {
-          gt: new Date()
-        }
-      },
-    })
+    const user = await redis.get(email)
+
     if(!user){
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "NO_TOKEN_FOUND",
+          message: "No Verification Token found",
+          details: "Please request a new verification email",
+        },
+      });
+
+    }
+
+    if(token !== user.data.verificationToken){
       return res.status(400).json({
         success: false,
         error: {
@@ -113,17 +113,21 @@ export const  verifyEmail = async(req,res)=>{
           details: "Please request a new verification email",
         },
       });
-
     }
 
+   await db.user.create(user)
+
+   await redis.del(email)
+
    await db.user.update({
-    where: { id: user.id },
+    where:{email:email},
     data:{
       isVerified:true,
       verificationToken:null,
       verificationTokenExpiry:null
     }
    })
+
    return res.status(201).json({
     status: true,
     message: "Email verified successfully",
@@ -187,7 +191,7 @@ export const loginUser = async(req,res)=>{
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      maxAge: 5 * 60 * 1000, // 5 minutes for access token
+      maxAge: 30 * 60 * 1000, // 30 minutes for access token
     };
     
     const cookieOptionsRefreshToken = {
@@ -201,6 +205,14 @@ export const loginUser = async(req,res)=>{
     res.cookie('refToken',refreshToken,cookieOptionsRefreshToken)
 
 
+    const cachedUser = {
+        id:user.id,
+        image:user.image,
+        name:user.name,
+        email:user.email,
+        role:user.role
+      }
+    await redis.set(`${user.id}`,cachedUser)
    
     return res.status(200).json({
       status: true,
@@ -263,6 +275,7 @@ export const logout = async (req,res)=>{
   })
   res.clearCookie('accToken')
   res.clearCookie('refToken')
+  await redis.del(user.id)
   return res.status(200).json({
     status: true,
     message: "User logged out successfully",

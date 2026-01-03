@@ -1,6 +1,6 @@
 import express from "express";
 import isLoggedin from "../middlewares/isLoggedin.js";
-import { getAllSubmissions, getAllTheSubmissionsForProblem, getSubmissionForProblem } from "../controllers/submission.controller.js";
+import { getAllSubmissions, getAllTheSubmissionsForProblem, getSubmissionForProblem } from "../controllers/submission.controllers.js";
 
 const submissionRoutes = express.Router();
 

@@ -1,10 +1,11 @@
 import { db } from "../libs/db.js";
 import jwt from "jsonwebtoken";
 import generateTokens from "../utils/TokenGenerator.js";
+import { redis } from "../index.js";
 
 const isLoggedin = async (req, res, next) => {
   const {refToken,accToken} = req.cookies
-  
+
   try {
   
 
@@ -16,8 +17,11 @@ const isLoggedin = async (req, res, next) => {
         details:"this is error from refresh token"
       });
     }
+   
 
     const decodedToken = jwt.verify(refToken,process.env.REFRESH_TOKEN_SECRET)
+
+    await redis.del(decodedToken.id)
 
     const user =await db.user.findUnique({
       where:{id:decodedToken.id},
@@ -37,6 +41,7 @@ const isLoggedin = async (req, res, next) => {
         details:"this is error from user not found part"
       });
     }
+
     const {accessToken,refreshToken} = generateTokens(user.id)
 
       await db.user.update({
@@ -44,12 +49,13 @@ const isLoggedin = async (req, res, next) => {
         data:{refreshToken}
       })
       
+      await redis.set(user.id,user)
 
       const cookieOptionsAccessToken = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        maxAge: 5 * 60 * 1000, // 5 minutes for access token
+        maxAge: 30 * 60 * 1000, // 30 minutes for access token
       };
       
       const cookieOptionsRefreshToken = {
@@ -61,21 +67,17 @@ const isLoggedin = async (req, res, next) => {
     
       res.cookie('accToken',accessToken,cookieOptionsAccessToken)
       res.cookie('refToken',refreshToken,cookieOptionsRefreshToken)
+
+
       req.user = user;
       next();
   }else{
+    
     const decodedToken = jwt.verify(accToken,process.env.ACCESS_TOKEN_SECRET)
+    
 
-    const user =await db.user.findUnique({
-      where:{id:decodedToken.id},
-      select:{
-        id:true,
-        image:true,
-        name:true,
-        email:true,
-        role:true
-      }
-    });
+    const user =await redis.get(decodedToken.id)
+
     if(!user){
       return res.status(401).json({
         status: false,
@@ -83,32 +85,10 @@ const isLoggedin = async (req, res, next) => {
         details:"this is error from else condition user"
       });
     }
-    const {accessToken,refreshToken} = generateTokens(user.id)
 
-      await db.user.update({
-        where:{id:user.id},
-        data:{
-          refreshToken
-        }
-      })
-
-      const cookieOptionsAccessToken = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        maxAge: 5 * 60 * 1000, // 5 minutes for access token
-      };
-      
-      const cookieOptionsRefreshToken = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for refresh token
-      };
-    
-      res.cookie('accToken',accessToken,cookieOptionsAccessToken)
-      res.cookie('refToken',refreshToken,cookieOptionsRefreshToken)
     req.user = user;
+    console.log('data comming fron cache');
+    
     next();
   }
 } catch (error) {
