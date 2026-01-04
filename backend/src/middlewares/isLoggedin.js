@@ -14,7 +14,7 @@ const isLoggedin = async (req, res, next) => {
       return res.status(401).json({
         status: false,
         message: "Unauthorized access",
-        details:"this is error from refresh token"
+        details:"Please login.."
       });
     }
    
@@ -72,10 +72,9 @@ const isLoggedin = async (req, res, next) => {
       req.user = user;
       next();
   }else{
-    
+        
     const decodedToken = jwt.verify(accToken,process.env.ACCESS_TOKEN_SECRET)
     
-
     const user =await redis.get(decodedToken.id)
 
     if(!user){

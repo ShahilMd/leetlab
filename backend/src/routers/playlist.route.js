@@ -14,6 +14,6 @@ playlistRoutes.post("/add-to-playlist/:plalistId", isLoggedin, addToPlaylist);
 
 playlistRoutes.delete("/delete/:playlistId", isLoggedin, deletePlaylist);
 
-playlistRoutes.delete("/delete-problem/:playlistId/:problemId", isLoggedin, deleteProblemFromPlaylist);
+playlistRoutes.delete("/delete-problem/:playlistId", isLoggedin, deleteProblemFromPlaylist);
 
 export default playlistRoutes

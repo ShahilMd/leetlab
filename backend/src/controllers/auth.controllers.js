@@ -1,12 +1,11 @@
 import bcrypt from "bcryptjs";
 import { db } from "../libs/db.js";
 import { validationResult } from "express-validator";
-import jwt from "jsonwebtoken";
-import crypto, { randomBytes, verify } from "crypto";
+import crypto from "crypto";
 import { UserRole } from "../generated/prisma/index.js";
 import sendVerificationemail from "../services/email.service.js";
 import generateTokens from "../utils/TokenGenerator.js";
-import { clear } from "console";
+
 import { redis } from "../index.js";
 
 

@@ -8,18 +8,25 @@ export const getAllListDetails = async (req, res)=>{
       where:{
         userId
       },
-      include:{
-        problems:{
-          include:{
-            problem: true
-          }
-        }
-      }
+      // include:{
+      //   problems:{
+      //     include:{
+      //       problem: true
+      //     }
+      //   }
+      // }
     })
+
+    if(playlists.length === 0){
+      return res.status(200).json({
+        success:true,
+        message:"No playlist found"
+      })
+    }
 
     return res.status(200).json({
       success:true,
-      message:"Playlist fetched Sucessfully",
+      message:"Playlist fetched sucessfully",
       playlists
     })
   } catch (error) {
@@ -36,7 +43,7 @@ export const getPlaylistDetails = async (req, res)=>{
     const userId = req.user.id;
     const {playlistId} = req.params;
 
-    const playlist = await db.findUnique({
+    const playlist = await db.playlist.findUnique({
       where:{
         userId,
         id:playlistId
@@ -127,38 +134,63 @@ export const createPlaylist = async (req, res)=>{
 export const addToPlaylist = async (req, res)=>{
   try {
     const userId = req.user.id;
-    const {playlistId} = req.params;
+    const playlistId = req.params.plalistId;
     const {problemIds} = req.body;
+    
 
     if(!Array.isArray(problemIds) || problemIds.length === 0){
       return res.status(400).json({
         error:"Invaid or missing ProblemId"
       })
     }
-    const existingProblemIds = await db.problemInPlaylist.findMany({
-      where:problemIds.map((problemId)=>{
-        playlistId,
-        problemId
-      })
+    const isPlaylistExist = await db.playlist.findUnique({
+      where:{
+        id:playlistId
+      }
     })
 
-    if(existingProblemIds){
-      return res.status(400).json({
+    if(!isPlaylistExist){
+      return res.status(200).json({
         success:false,
-        message:"problem already exists in playlist"
+        message:`No playlist found with playlistId ${playlistId}`
       })
     }
-    const problemInPlaylist = await db.problemInPlaylist.create({
-      data:problemIds.map((problemId=>{
-        playlistId,
-        problemId
-      }))
-    })
+    
+    const addedProblems  = []
 
+    for (let i = 0; i < problemIds.length; i++) {
+
+      const existingProblemIds = await db.problemInPlaylist.findMany({
+        where:{
+          playlistId,
+          problemId:problemIds[i]
+        }
+      })
+
+      if(existingProblemIds.length > 0){
+        return res.status(400).json({
+          success:false,
+          message:"problem already exists in playlist"
+        })
+      }
+
+      const problemInPlaylist = await db.problemInPlaylist.create({
+        data:{
+          playlistId,
+          problemId:problemIds[i]
+        }
+      })
+
+      console.log("problem added to the playlist",problemInPlaylist);
+      
+      
+      addedProblems.push(problemInPlaylist) 
+    }
+    
     return res.status(201).json({
       success:true,
       message:"Problem added To The Playlist",
-      problemInPlaylist,
+      addedProblems,
     })
 
   } catch (error) {
@@ -173,7 +205,22 @@ export const addToPlaylist = async (req, res)=>{
 export const deletePlaylist = async (req, res)=>{
   try {
     const userId = req.user.id;
-    const {playlistId} = req.params;
+    const playlistId = req.params.playlistId;
+
+    const playlist = await db.playlist.findUnique({
+      where:{
+        id:playlistId,
+        userId:userId
+      }
+    })
+    console.log(playlist);
+    
+    if(!playlist){
+      return res.status(200).json({
+        success:false,
+        message:"No playlist found"
+      })
+    }
 
     await db.playlist.delete({
       where:{
